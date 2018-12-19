@@ -44,7 +44,7 @@ func main() {
 
 	http.Handle("/", router)
 
-	err := http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":10000", nil)
 	if err != nil {
 		panic(err)
 	}

@@ -5,11 +5,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 func main() {
 
-	http.HandleFunc("/answers", func(w http.ResponseWriter, r *http.Request) {
+	router := mux.NewRouter()
+
+	router.HandleFunc("/answers", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "OPTIONS":
 			{
@@ -32,11 +36,13 @@ func main() {
 		}
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var httpHeaders = w.Header()
 		httpHeaders.Add("Access-Control-Allow-Origin", "*")
 		fmt.Fprint(w, "")
 	})
+
+	http.Handle("/", router)
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

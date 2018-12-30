@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/gorilla/mux"
 	"io/ioutil"
 	"log"
 	"net/http"
-
-	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -15,12 +14,6 @@ func main() {
 
 	router.HandleFunc("/answers", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case "OPTIONS":
-			{
-				var httpHeaders = w.Header()
-				httpHeaders.Add("Access-Control-Allow-Origin", "*")
-				fmt.Fprint(w, "")
-			}
 		case "GET":
 			{
 				body, err := ioutil.ReadFile("answers.json")
@@ -41,6 +34,8 @@ func main() {
 			{
 				var httpHeaders = w.Header()
 				httpHeaders.Add("Access-Control-Allow-Origin", "*")
+				httpHeaders.Add("Access-Control-Request-Method", "POST")
+				httpHeaders.Add("Access-Control-Allow-Headers", "Content-Type")
 				fmt.Fprint(w, "")
 			}
 		case "POST":
@@ -53,16 +48,8 @@ func main() {
 				if err1 != nil {
 					panic(err1)
 				}
-				var httpHeaders = w.Header()
-				httpHeaders.Add("Access-Control-Allow-Origin", "*")
 			}
 		}
-	})
-
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		var httpHeaders = w.Header()
-		httpHeaders.Add("Access-Control-Allow-Origin", "*")
-		fmt.Fprint(w, "")
 	})
 
 	http.Handle("/", router)

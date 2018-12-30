@@ -48,6 +48,8 @@ func main() {
 				if err1 != nil {
 					panic(err1)
 				}
+				var httpHeaders = w.Header()
+				httpHeaders.Add("Access-Control-Allow-Origin", "*")
 			}
 		}
 	})

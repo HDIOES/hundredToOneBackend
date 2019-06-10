@@ -40,10 +40,32 @@ type CreateGameHandler struct {
 }
 
 func (cgh *CreateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if rc, err := r.GetBody(); err == nil {
-		var game *Game
-		if err := json.NewDecoder(rc).Decode(game); err == nil {
-			//database logic of saving game
+	game := &Game{}
+	if err := json.NewDecoder(r.Body).Decode(game); err == nil {
+		//database logic of saving game
+		tx, txErr := cgh.Db.Begin()
+		if txErr != nil {
+			log.Println("Transaction start failed: ", txErr)
+			err = txErr
+			return
+		}
+		defer func(tx *sql.Tx) {
+			if r := recover(); r != nil {
+				tx.Rollback()
+			}
+		}(tx)
+		if data, err := json.Marshal(game); err == nil {
+			_, execTxErr := tx.Exec("INSERT INTO GAMES (BODY) VALUES($1)", data)
+			if execTxErr != nil {
+				log.Println("Query cannot be executed: ", execTxErr)
+				err = execTxErr
+				panic(execTxErr)
+			}
+			if txCommitErr := tx.Commit(); txCommitErr != nil {
+				log.Println("Transaction cannot be commited: ", txCommitErr)
+				err = txCommitErr
+				panic(txCommitErr)
+			}
 		} else {
 			log.Println(err)
 		}
@@ -54,21 +76,21 @@ func (cgh *CreateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 //Game struct represent rest object for game entity
 type Game struct {
-	ID               int64
-	Desc             string
-	FirstQuestion    Question
-	DoubleQuestion   Question
-	InversedQuestion Question
+	ID               int64     `json:"id"`
+	Desc             string    `json:"desc"`
+	FirstQuestion    *Question `json:"firstQuestion"`
+	DoubleQuestion   *Question `json:"doubleQuestion"`
+	InversedQuestion *Question `json:"inversedQuestion"`
 }
 
 //Question struct represent rest object for question entity
 type Question struct {
-	Text    string
-	answers []Answer
+	Text    string    `json:"text"`
+	answers []*Answer `json:"answers"`
 }
 
 //Answer struct represent rest object for answer entity
 type Answer struct {
-	Text  string
-	Score int32
+	Text  string `json:"text"`
+	Score int32  `json:"score"`
 }

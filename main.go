@@ -1,64 +1,64 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
+	"database/sql"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
+	game "github.com/HDIOES/hundredToOneBackend/rest/games"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
+	"github.com/tkanos/gonfig"
 )
+
+type Configuration struct {
+	DatabaseUrl        string `json:"databaseUrl"`
+	MaxOpenConnections int    `json:"maxOpenConnections"`
+	MaxIdleConnections int    `json:"maxIdleConnections"`
+	ConnectionTimeout  int    `json:"connectionTimeout"`
+	Port               int    `json:"port"`
+}
 
 func main() {
 
+	configuration := Configuration{}
+	gonfigErr := gonfig.GetConf("dbconfig.json", &configuration)
+	if gonfigErr != nil {
+		panic(gonfigErr)
+	}
+
+	db, err := sql.Open("postgres", configuration.DatabaseUrl)
+	if err != nil {
+		panic(err)
+	}
+	db.SetMaxIdleConns(configuration.MaxIdleConnections)
+	db.SetMaxOpenConns(configuration.MaxOpenConnections)
+	timeout := strconv.Itoa(configuration.ConnectionTimeout) + "s"
+	timeoutDuration, durationErr := time.ParseDuration(timeout)
+	if durationErr != nil {
+		log.Println("Error parsing of timeout parameter")
+		panic(durationErr)
+	} else {
+		db.SetConnMaxLifetime(timeoutDuration)
+	}
+
+	log.Println("Configuration has been loaded")
+
 	router := mux.NewRouter()
 
-	router.HandleFunc("/answers", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "GET":
-			{
-				body, err := ioutil.ReadFile("answers.json")
-				if err != nil {
-					panic(err)
-				}
-				var httpHeaders = w.Header()
-				httpHeaders.Add("Access-Control-Allow-Origin", "*")
-				log.Println(string(body))
-				fmt.Fprint(w, string(body))
-			}
-		}
-	})
-
-	router.HandleFunc("/answers/save", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "OPTIONS":
-			{
-				var httpHeaders = w.Header()
-				httpHeaders.Add("Access-Control-Allow-Origin", "*")
-				httpHeaders.Add("Access-Control-Request-Method", "POST")
-				httpHeaders.Add("Access-Control-Allow-Headers", "Content-Type")
-				fmt.Fprint(w, "")
-			}
-		case "POST":
-			{
-				data, err := ioutil.ReadAll(r.Body)
-				if err != nil {
-					panic(err)
-				}
-				err1 := ioutil.WriteFile("answers.json", data, 0644)
-				if err1 != nil {
-					panic(err1)
-				}
-				var httpHeaders = w.Header()
-				httpHeaders.Add("Access-Control-Allow-Origin", "*")
-			}
-		}
-	})
+	router.Handle("/game", game.CreateCreateGameHandler(db)).
+		Methods("POST")
 
 	http.Handle("/", router)
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
-	err := http.ListenAndServe(":10000", nil)
-	if err != nil {
+	listenandserveErr := http.ListenAndServe(":"+strconv.Itoa(configuration.Port), handlers.CORS(originsOk, headersOk, methodsOk)(router))
+	if listenandserveErr != nil {
 		panic(err)
 	}
 

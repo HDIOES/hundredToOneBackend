@@ -1,0 +1,7 @@
+{
+    "databaseUrl": "postgres://forna_user:12345@localhost:5432/gamesdb",
+    "maxOpenConnections": 20,
+    "maxIdleConnections": 5,
+    "connectionTimeout": 60,
+    "port": 10045
+}

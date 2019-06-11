@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
 //CreateSearchGamesHandler function
@@ -19,13 +21,46 @@ type SearchGamesHandler struct {
 }
 
 func (sgh *SearchGamesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	/*if vars, parseErr := url.ParseQuery(r.URL.RawQuery); parseErr == nil {
-		//limit, limitOk := vars["limit"]
-		//offset, offsetOk := vars["offset"]
-		//logic of searching games
+	if vars, parseErr := url.ParseQuery(r.URL.RawQuery); parseErr == nil {
+		limit, limitOk := vars["limit"]
+		offset, offsetOk := vars["offset"]
+		sqlQuery := "SELECT ID, BODY FROM GAMES WHERE 1 = 1"
+		countOfParameters := 1
+		args := make([]interface{}, 0)
+		if limitOk {
+			sqlQuery += " LIMIT $" + strconv.Itoa(countOfParameters)
+			countOfParameters++
+			args = append(args, limit)
+		} else {
+			sqlQuery += " LIMIT 5"
+		}
+		if offsetOk {
+			sqlQuery += " OFFSET $" + strconv.Itoa(countOfParameters)
+			countOfParameters++
+			args = append(args, offset)
+		}
+		rows, rowsErr := sgh.Db.Query(sqlQuery, args...)
+		if rowsErr != nil {
+			log.Println(rowsErr)
+		}
+		defer rows.Close()
+		games := []Game{}
+		for rows.Next() {
+			var ID *int64
+			var body *[]byte
+			rows.Scan(&ID, &body)
+			var game = &Game{}
+			if err := json.Unmarshal(*body, game); err == nil {
+				game.ID = *ID
+				games = append(games, *game)
+			} else {
+				log.Println(err)
+			}
+		}
+		json.NewEncoder(w).Encode(games)
 	} else {
 		log.Println(parseErr)
-	}*/
+	}
 }
 
 //CreateCreateGameHandler function

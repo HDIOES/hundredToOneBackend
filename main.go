@@ -51,6 +51,8 @@ func main() {
 
 	router.Handle("/game", game.CreateCreateGameHandler(db)).
 		Methods("POST")
+	router.Handle("/games", game.CreateSearchGamesHandler(db)).
+		Methods("GET")
 
 	http.Handle("/", router)
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})

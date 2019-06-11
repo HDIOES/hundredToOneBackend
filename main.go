@@ -55,6 +55,8 @@ func main() {
 		Methods("GET")
 	router.Handle("/game/{id}", game.CreateDeleteGameHandler(db)).
 		Methods("DELETE")
+	router.Handle("/game/{id}", game.CreateUpdateGameHandler(db)).
+		Methods("PUT")
 
 	http.Handle("/", router)
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})

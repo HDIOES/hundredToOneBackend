@@ -147,6 +147,55 @@ func (dgh *DeleteGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+//CreateUpdateGameHandler function
+func CreateUpdateGameHandler(db *sql.DB) http.Handler {
+	updateGameHandler := &UpdateGameHandler{Db: db}
+	return updateGameHandler
+}
+
+//UpdateGameHandler struct
+type UpdateGameHandler struct {
+	Db *sql.DB
+}
+
+func (ugh *UpdateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, idOk := vars["id"]
+	if !idOk {
+		log.Printf("id is not defined")
+		return
+	}
+	game := &Game{}
+	if err := json.NewDecoder(r.Body).Decode(game); err == nil {
+		//database logic of saving game
+		tx, txErr := ugh.Db.Begin()
+		if txErr != nil {
+			log.Println("Transaction start failed: ", txErr)
+			return
+		}
+		defer func(tx *sql.Tx) {
+			if r := recover(); r != nil {
+				tx.Rollback()
+			}
+		}(tx)
+		if data, err := json.Marshal(game); err == nil {
+			_, execTxErr := tx.Exec("UPDATE GAMES SET BODY = $1 WHERE ID = $2", data, id)
+			if execTxErr != nil {
+				log.Println("Query cannot be executed: ", execTxErr)
+				panic(execTxErr)
+			}
+			if txCommitErr := tx.Commit(); txCommitErr != nil {
+				log.Println("Transaction cannot be commited: ", txCommitErr)
+				panic(txCommitErr)
+			}
+		} else {
+			log.Println(err)
+		}
+	} else {
+		log.Println(err)
+	}
+}
+
 //Game struct represent rest object for game entity
 type Game struct {
 	ID               int64    `json:"id"`

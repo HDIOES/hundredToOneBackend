@@ -30,14 +30,14 @@ func (sgh *SearchGamesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		if limitOk {
 			sqlQuery += " LIMIT $" + strconv.Itoa(countOfParameters)
 			countOfParameters++
-			args = append(args, limit)
+			args = append(args, limit[0])
 		} else {
 			sqlQuery += " LIMIT 5"
 		}
 		if offsetOk {
 			sqlQuery += " OFFSET $" + strconv.Itoa(countOfParameters)
 			countOfParameters++
-			args = append(args, offset)
+			args = append(args, offset[0])
 		}
 		rows, rowsErr := sgh.Db.Query(sqlQuery, args...)
 		if rowsErr != nil {
@@ -111,17 +111,17 @@ func (cgh *CreateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 //Game struct represent rest object for game entity
 type Game struct {
-	ID               int64     `json:"id"`
-	Desc             string    `json:"desc"`
-	FirstQuestion    *Question `json:"firstQuestion"`
-	DoubleQuestion   *Question `json:"doubleQuestion"`
-	InversedQuestion *Question `json:"inversedQuestion"`
+	ID               int64    `json:"id"`
+	Desc             string   `json:"desc"`
+	FirstQuestion    Question `json:"firstQuestion"`
+	DoubleQuestion   Question `json:"doubleQuestion"`
+	InversedQuestion Question `json:"inversedQuestion"`
 }
 
 //Question struct represent rest object for question entity
 type Question struct {
-	Text    string    `json:"text"`
-	answers []*Answer `json:"answers"`
+	Text    string   `json:"text"`
+	Answers []Answer `json:"answers"`
 }
 
 //Answer struct represent rest object for answer entity

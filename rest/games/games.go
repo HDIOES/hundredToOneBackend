@@ -196,6 +196,43 @@ func (ugh *UpdateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+//CreateGetGameHandler function
+func CreateGetGameHandler(db *sql.DB) http.Handler {
+	getGameHandler := &GetGameHandler{Db: db}
+	return getGameHandler
+}
+
+//GetGameHandler struct
+type GetGameHandler struct {
+	Db *sql.DB
+}
+
+func (ggh *GetGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, idOk := vars["id"]
+	if !idOk {
+		log.Printf("id is not defined")
+		return
+	}
+	rows, rowsErr := ggh.Db.Query("SELECT BODY FROM GAMES WHERE ID = $1", id)
+	if rowsErr != nil {
+		log.Println(rowsErr)
+	}
+	defer rows.Close()
+	var game = &Game{}
+	if rows.Next() {
+		var body *[]byte
+		rows.Scan(&body)
+		if err := json.Unmarshal(*body, game); err == nil {
+			idint, _ := strconv.ParseInt(id, 10, 64)
+			game.ID = idint
+		} else {
+			log.Println(err)
+		}
+	}
+	json.NewEncoder(w).Encode(game)
+}
+
 //Game struct represent rest object for game entity
 type Game struct {
 	ID               int64    `json:"id"`

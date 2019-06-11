@@ -49,10 +49,12 @@ func main() {
 
 	router := mux.NewRouter()
 
-	router.Handle("/game", game.CreateCreateGameHandler(db)).
-		Methods("POST")
 	router.Handle("/games", game.CreateSearchGamesHandler(db)).
 		Methods("GET")
+	router.Handle("/game/{id}", game.CreateGetGameHandler(db)).
+		Methods("GET")
+	router.Handle("/game", game.CreateCreateGameHandler(db)).
+		Methods("POST")
 	router.Handle("/game/{id}", game.CreateDeleteGameHandler(db)).
 		Methods("DELETE")
 	router.Handle("/game/{id}", game.CreateUpdateGameHandler(db)).

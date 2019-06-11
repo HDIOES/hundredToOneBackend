@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 //CreateSearchGamesHandler function
@@ -81,7 +83,6 @@ func (cgh *CreateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		tx, txErr := cgh.Db.Begin()
 		if txErr != nil {
 			log.Println("Transaction start failed: ", txErr)
-			err = txErr
 			return
 		}
 		defer func(tx *sql.Tx) {
@@ -93,12 +94,10 @@ func (cgh *CreateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			_, execTxErr := tx.Exec("INSERT INTO GAMES (BODY) VALUES($1)", data)
 			if execTxErr != nil {
 				log.Println("Query cannot be executed: ", execTxErr)
-				err = execTxErr
 				panic(execTxErr)
 			}
 			if txCommitErr := tx.Commit(); txCommitErr != nil {
 				log.Println("Transaction cannot be commited: ", txCommitErr)
-				err = txCommitErr
 				panic(txCommitErr)
 			}
 		} else {
@@ -106,6 +105,45 @@ func (cgh *CreateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 	} else {
 		log.Println(err)
+	}
+}
+
+//CreateDeleteGameHandler function
+func CreateDeleteGameHandler(db *sql.DB) http.Handler {
+	deleteGameHandler := &DeleteGameHandler{Db: db}
+	return deleteGameHandler
+}
+
+//DeleteGameHandler struct
+type DeleteGameHandler struct {
+	Db *sql.DB
+}
+
+func (dgh *DeleteGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, idOk := vars["id"]
+	if !idOk {
+		log.Printf("id is not defined")
+		return
+	}
+	tx, txErr := dgh.Db.Begin()
+	if txErr != nil {
+		log.Println("Transaction start failed: ", txErr)
+		return
+	}
+	defer func(tx *sql.Tx) {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}(tx)
+	_, execTxErr := tx.Exec("DELETE FROM GAMES WHERE ID = $1", id)
+	if execTxErr != nil {
+		log.Println("Query cannot be executed: ", execTxErr)
+		panic(execTxErr)
+	}
+	if txCommitErr := tx.Commit(); txCommitErr != nil {
+		log.Println("Transaction cannot be commited: ", txCommitErr)
+		panic(txCommitErr)
 	}
 }
 

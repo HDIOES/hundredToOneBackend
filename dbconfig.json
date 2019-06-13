@@ -1,5 +1,5 @@
 {
-    "databaseUrl": "postgres://forna_user:12345@192.168.0.1:5432/gamesdb",
+    "databaseUrl": "postgres://postgres:postgres@postgresdb:5432/gamesdb?sslmode=disable",
     "maxOpenConnections": 20,
     "maxIdleConnections": 5,
     "connectionTimeout": 60,

@@ -1,0 +1,30 @@
+version: '3'
+
+volumes:
+  database_data:
+    driver: local
+
+services:
+  postgresdb:
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gamesdb
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+  app:
+    build: .
+    ports:
+      - 10045:10045
+    depends_on:
+      - postgresdb
+    
+    
+
+
+
+
+

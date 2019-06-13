@@ -18,7 +18,6 @@ services:
       - 5434:5432
   app:
     build: .
-    command: ["sql-migrate", "up", "-env", "test"]
     restart: always
     ports:
       - 10045:10045

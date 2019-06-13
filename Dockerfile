@@ -6,7 +6,6 @@ COPY Gopkg.toml Gopkg.lock ./
 COPY . ./
 RUN dep ensure
 RUN go install github.com/HDIOES/hundredToOneBackend
-RUN sql-migrate up -env test
 RUN cp dbconfig.json $GOPATH/bin/
 WORKDIR $GOPATH/bin
 ENTRYPOINT ["./hundredToOneBackend"]

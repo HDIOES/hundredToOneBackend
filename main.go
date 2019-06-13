@@ -12,6 +12,8 @@ import (
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/tkanos/gonfig"
+
+	migrate "github.com/rubenv/sql-migrate"
 )
 
 type Configuration struct {
@@ -23,7 +25,6 @@ type Configuration struct {
 }
 
 func main() {
-
 	configuration := Configuration{}
 	gonfigErr := gonfig.GetConf("dbconfig.json", &configuration)
 	if gonfigErr != nil {
@@ -46,6 +47,16 @@ func main() {
 	}
 
 	log.Println("Configuration has been loaded")
+
+	migrations := &migrate.FileMigrationSource{
+		Dir: "migrations",
+	}
+
+	if n, err := migrate.Exec(db, "postgres", migrations, migrate.Up); err == nil {
+		log.Printf("Applied %d migrations!\n", n)
+	} else {
+		panic(err)
+	}
 
 	router := mux.NewRouter()
 

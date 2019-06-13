@@ -1,4 +1,4 @@
-version: '3'
+version: '3.6'
 
 volumes:
   database_data:
@@ -15,18 +15,15 @@ services:
     volumes:
       - database_data:/var/lib/postgresql/data
     ports:
-      - 5432:5432
+      - 5434:5432
   app:
     build: .
+    command: ["sql-migrate", "up", "-env", "test"]
     restart: always
     ports:
       - 10045:10045
     depends_on:
       - postgresdb
-    
-    
-
-
 
 
 

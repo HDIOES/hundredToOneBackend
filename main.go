@@ -35,6 +35,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	//Parody of circuit breaker
+	if pingErr := db.Ping(); pingErr == nil {
+		log.Printf("Database available!!!")
+	} else {
+		log.Print(pingErr)
+		panic(pingErr)
+	}
+
 	db.SetMaxIdleConns(configuration.MaxIdleConnections)
 	db.SetMaxOpenConns(configuration.MaxOpenConnections)
 	timeout := strconv.Itoa(configuration.ConnectionTimeout) + "s"

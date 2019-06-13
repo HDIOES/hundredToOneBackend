@@ -1,8 +1,0 @@
-development:
-    dialect: postgres
-    datasource: postgres://forna_user:12345@localhost:5432/gamesdb?sslmode=disable
-    dir: migrations
-test:
-    dialect: postgres
-    datasource: postgres://postgres:postgres@postgresdb:5434/gamesdb?sslmode=disable
-    dir: migrations

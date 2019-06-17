@@ -69,19 +69,22 @@ func main() {
 	router := mux.NewRouter()
 
 	router.Handle("/games", game.CreateSearchGamesHandler(db)).
-		Methods("GET")
+		Methods("GET", "OPTIONS")
 	router.Handle("/game/{id}", game.CreateGetGameHandler(db)).
-		Methods("GET")
+		Methods("GET", "OPTIONS")
 	router.Handle("/game", game.CreateCreateGameHandler(db)).
-		Methods("POST")
+		Methods("POST", "OPTIONS")
 	router.Handle("/game/{id}", game.CreateDeleteGameHandler(db)).
-		Methods("DELETE")
+		Methods("DELETE", "OPTIONS")
 	router.Handle("/game/{id}", game.CreateUpdateGameHandler(db)).
-		Methods("PUT")
+		Methods("PUT", "OPTIONS")
 
 	http.Handle("/", router)
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
-	listenandserveErr := http.ListenAndServe(":"+strconv.Itoa(configuration.Port), handlers.CORS(originsOk)(router))
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE"})
+
+	listenandserveErr := http.ListenAndServe(":"+strconv.Itoa(configuration.Port), handlers.CORS(originsOk, headersOk, methodsOk)(router))
 	if listenandserveErr != nil {
 		panic(err)
 	}

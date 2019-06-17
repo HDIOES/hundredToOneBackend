@@ -23,6 +23,10 @@ type SearchGamesHandler struct {
 }
 
 func (sgh *SearchGamesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		return
+	}
 	if vars, parseErr := url.ParseQuery(r.URL.RawQuery); parseErr == nil {
 		limit, limitOk := vars["limit"]
 		offset, offsetOk := vars["offset"]
@@ -77,6 +81,11 @@ type CreateGameHandler struct {
 }
 
 func (cgh *CreateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		log.Printf("dfdfasaf")
+		return
+	}
 	game := &Game{}
 	if err := json.NewDecoder(r.Body).Decode(game); err == nil {
 		//database logic of saving game
@@ -120,6 +129,10 @@ type DeleteGameHandler struct {
 }
 
 func (dgh *DeleteGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		return
+	}
 	vars := mux.Vars(r)
 	id, idOk := vars["id"]
 	if !idOk {
@@ -159,6 +172,10 @@ type UpdateGameHandler struct {
 }
 
 func (ugh *UpdateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		return
+	}
 	vars := mux.Vars(r)
 	id, idOk := vars["id"]
 	if !idOk {
@@ -208,6 +225,10 @@ type GetGameHandler struct {
 }
 
 func (ggh *GetGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		return
+	}
 	vars := mux.Vars(r)
 	id, idOk := vars["id"]
 	if !idOk {

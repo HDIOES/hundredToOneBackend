@@ -59,11 +59,11 @@ func (sgh *SearchGamesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 				log.Println(err)
 			}
 		}
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 		json.NewEncoder(w).Encode(games)
 	} else {
 		log.Println(parseErr)
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 //CreateCreateGameHandler function
@@ -107,6 +107,7 @@ func (cgh *CreateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	} else {
 		log.Println(err)
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 //CreateDeleteGameHandler function
@@ -146,6 +147,7 @@ func (dgh *DeleteGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		log.Println("Transaction cannot be commited: ", txCommitErr)
 		panic(txCommitErr)
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 //CreateUpdateGameHandler function
@@ -195,6 +197,7 @@ func (ugh *UpdateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	} else {
 		log.Println(err)
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 //CreateGetGameHandler function

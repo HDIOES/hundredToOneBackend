@@ -253,5 +253,5 @@ type Question struct {
 //Answer struct represent rest object for answer entity
 type Answer struct {
 	Text  string `json:"text"`
-	Score int64  `json:"score"`
+	Score int64  `json:"score,string,omitempty"`
 }

@@ -1,5 +1,5 @@
 {
-    "databaseUrl": "postgres://postgres:postgres@postgresdb:5432/gamesdb?sslmode=disable",
+    "databaseUrl": "postgres://postgres:12345@localhost:5432/gamesdb?sslmode=disable",
     "maxOpenConnections": 20,
     "maxIdleConnections": 5,
     "connectionTimeout": 60,

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	game "github.com/HDIOES/hundredToOneBackend/rest/games"
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/tkanos/gonfig"
@@ -69,24 +68,36 @@ func main() {
 	router := mux.NewRouter()
 
 	router.Handle("/games", game.CreateSearchGamesHandler(db)).
-		Methods("GET", "OPTIONS")
+		Methods("GET")
 	router.Handle("/game/{id}", game.CreateGetGameHandler(db)).
-		Methods("GET", "OPTIONS")
+		Methods("GET")
 	router.Handle("/game", game.CreateCreateGameHandler(db)).
-		Methods("POST", "OPTIONS")
+		Methods("POST")
 	router.Handle("/game/{id}", game.CreateDeleteGameHandler(db)).
-		Methods("DELETE", "OPTIONS")
+		Methods("DELETE")
 	router.Handle("/game/{id}", game.CreateUpdateGameHandler(db)).
-		Methods("PUT", "OPTIONS")
+		Methods("PUT")
 
 	http.Handle("/", router)
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})
+	/*headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE"})*/
 
-	listenandserveErr := http.ListenAndServe(":"+strconv.Itoa(configuration.Port), handlers.CORS(originsOk, headersOk, methodsOk)(router))
+	listenandserveErr := http.ListenAndServe(":"+strconv.Itoa(configuration.Port), corsHandler(router))
 	if listenandserveErr != nil {
 		panic(err)
 	}
 
+}
+
+func corsHandler(h http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "OPTIONS" {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, HEAD, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		} else {
+			h.ServeHTTP(w, r)
+		}
+	}
 }

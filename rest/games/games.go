@@ -33,23 +33,19 @@ func (sgh *SearchGamesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 			value, parseErr := strconv.ParseInt(limit[0], 10, 64)
 			if parseErr != nil {
 				log.Printf("limit is not defined correctly")
-				return
 			}
 			limitInt = value
 		} else {
 			log.Printf("limit is not defined correctly")
-			return
 		}
 		if offsetOk {
 			value, parseErr := strconv.ParseInt(offset[0], 10, 64)
 			if parseErr != nil {
 				log.Printf("offset is not defined correctly")
-				return
 			}
 			offsetInt = value
 		} else {
 			log.Printf("offset is not defined correctly")
-			return
 		}
 		games, _ := searchGames(sgh.Db, limitInt, offsetInt)
 		json.NewEncoder(w).Encode(games)

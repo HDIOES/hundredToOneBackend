@@ -3,6 +3,7 @@ package game
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -26,39 +27,31 @@ func (sgh *SearchGamesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	if vars, parseErr := url.ParseQuery(r.URL.RawQuery); parseErr == nil {
 		limit, limitOk := vars["limit"]
 		offset, offsetOk := vars["offset"]
-		sqlQuery := "SELECT ID, BODY FROM GAMES WHERE 1 = 1"
-		countOfParameters := 1
-		args := make([]interface{}, 0)
+		var offsetInt int64
+		var limitInt int64 = 5
 		if limitOk {
-			sqlQuery += " LIMIT $" + strconv.Itoa(countOfParameters)
-			countOfParameters++
-			args = append(args, limit[0])
+			value, parseErr := strconv.ParseInt(limit[0], 10, 64)
+			if parseErr != nil {
+				log.Printf("limit is not defined correctly")
+				return
+			}
+			limitInt = value
 		} else {
-			sqlQuery += " LIMIT 5"
+			log.Printf("limit is not defined correctly")
+			return
 		}
 		if offsetOk {
-			sqlQuery += " OFFSET $" + strconv.Itoa(countOfParameters)
-			countOfParameters++
-			args = append(args, offset[0])
-		}
-		rows, rowsErr := sgh.Db.Query(sqlQuery, args...)
-		if rowsErr != nil {
-			log.Println(rowsErr)
-		}
-		defer rows.Close()
-		games := []Game{}
-		for rows.Next() {
-			var ID *int64
-			var body *[]byte
-			rows.Scan(&ID, &body)
-			var game = &Game{}
-			if err := json.Unmarshal(*body, game); err == nil {
-				game.ID = *ID
-				games = append(games, *game)
-			} else {
-				log.Println(err)
+			value, parseErr := strconv.ParseInt(offset[0], 10, 64)
+			if parseErr != nil {
+				log.Printf("offset is not defined correctly")
+				return
 			}
+			offsetInt = value
+		} else {
+			log.Printf("offset is not defined correctly")
+			return
 		}
+		games, _ := searchGames(sgh.Db, limitInt, offsetInt)
 		json.NewEncoder(w).Encode(games)
 	} else {
 		log.Println(parseErr)
@@ -79,30 +72,7 @@ type CreateGameHandler struct {
 func (cgh *CreateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	game := &Game{}
 	if err := json.NewDecoder(r.Body).Decode(game); err == nil {
-		//database logic of saving game
-		tx, txErr := cgh.Db.Begin()
-		if txErr != nil {
-			log.Println("Transaction start failed: ", txErr)
-			return
-		}
-		defer func(tx *sql.Tx) {
-			if r := recover(); r != nil {
-				tx.Rollback()
-			}
-		}(tx)
-		if data, err := json.Marshal(game); err == nil {
-			_, execTxErr := tx.Exec("INSERT INTO GAMES (BODY) VALUES($1)", data)
-			if execTxErr != nil {
-				log.Println("Query cannot be executed: ", execTxErr)
-				panic(execTxErr)
-			}
-			if txCommitErr := tx.Commit(); txCommitErr != nil {
-				log.Println("Transaction cannot be commited: ", txCommitErr)
-				panic(txCommitErr)
-			}
-		} else {
-			log.Println(err)
-		}
+		createGame(cgh.Db, *game)
 	} else {
 		log.Println(err)
 	}
@@ -126,25 +96,11 @@ func (dgh *DeleteGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		log.Printf("id is not defined")
 		return
 	}
-	tx, txErr := dgh.Db.Begin()
-	if txErr != nil {
-		log.Println("Transaction start failed: ", txErr)
-		return
+	idint, parseErr := strconv.ParseInt(id, 10, 64)
+	if parseErr != nil {
+		log.Printf("id is not parsed")
 	}
-	defer func(tx *sql.Tx) {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}(tx)
-	_, execTxErr := tx.Exec("DELETE FROM GAMES WHERE ID = $1", id)
-	if execTxErr != nil {
-		log.Println("Query cannot be executed: ", execTxErr)
-		panic(execTxErr)
-	}
-	if txCommitErr := tx.Commit(); txCommitErr != nil {
-		log.Println("Transaction cannot be commited: ", txCommitErr)
-		panic(txCommitErr)
-	}
+	deleteGame(dgh.Db, idint)
 }
 
 //CreateUpdateGameHandler function
@@ -165,32 +121,13 @@ func (ugh *UpdateGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		log.Printf("id is not defined")
 		return
 	}
+	idint, parseErr := strconv.ParseInt(id, 10, 64)
+	if parseErr != nil {
+		log.Printf("id is not parsed")
+	}
 	game := &Game{}
 	if err := json.NewDecoder(r.Body).Decode(game); err == nil {
-		//database logic of saving game
-		tx, txErr := ugh.Db.Begin()
-		if txErr != nil {
-			log.Println("Transaction start failed: ", txErr)
-			return
-		}
-		defer func(tx *sql.Tx) {
-			if r := recover(); r != nil {
-				tx.Rollback()
-			}
-		}(tx)
-		if data, err := json.Marshal(game); err == nil {
-			_, execTxErr := tx.Exec("UPDATE GAMES SET BODY = $1 WHERE ID = $2", data, id)
-			if execTxErr != nil {
-				log.Println("Query cannot be executed: ", execTxErr)
-				panic(execTxErr)
-			}
-			if txCommitErr := tx.Commit(); txCommitErr != nil {
-				log.Println("Transaction cannot be commited: ", txCommitErr)
-				panic(txCommitErr)
-			}
-		} else {
-			log.Println(err)
-		}
+		updateGame(ugh.Db, idint, *game)
 	} else {
 		log.Println(err)
 	}
@@ -214,9 +151,110 @@ func (ggh *GetGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("id is not defined")
 		return
 	}
-	rows, rowsErr := ggh.Db.Query("SELECT BODY FROM GAMES WHERE ID = $1", id)
+	idint, parseErr := strconv.ParseInt(id, 10, 64)
+	if parseErr != nil {
+		log.Printf("id is not parsed")
+	}
+	game, _ := getGame(ggh.Db, idint)
+	json.NewEncoder(w).Encode(game)
+}
+
+/*db functions*/
+
+func deleteGame(db *sql.DB, id int64) error {
+	tx, txErr := db.Begin()
+	if txErr != nil {
+		return txErr
+	}
+	var rollback = newFalse()
+	defer func(tx *sql.Tx, rollback *bool) {
+		if rollback != nil && *rollback == true {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				log.Println("Transaction cannot be rollbacked", rollbackErr)
+			}
+		}
+	}(tx, rollback)
+	_, execTxErr := tx.Exec("DELETE FROM GAMES WHERE ID = $1", id)
+	if execTxErr != nil {
+		rollback = newTrue()
+		return execTxErr
+	}
+	if txCommitErr := tx.Commit(); txCommitErr != nil {
+		rollback = newTrue()
+		return txCommitErr
+	}
+	return nil
+}
+
+func updateGame(db *sql.DB, id int64, game Game) error {
+	tx, txErr := db.Begin()
+	if txErr != nil {
+		return txErr
+	}
+	var rollback = newFalse()
+	defer func(tx *sql.Tx, rollback *bool) {
+		if rollback != nil && *rollback == true {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				log.Println("Transaction cannot be rollbacked", rollbackErr)
+			}
+		}
+	}(tx, rollback)
+	data, marshallErr := json.Marshal(game)
+	if marshallErr != nil {
+		rollback = newTrue()
+		return marshallErr
+	}
+	_, execTxErr := tx.Exec("UPDATE GAMES SET BODY = $1 WHERE ID = $2", data, id)
+	if execTxErr != nil {
+		rollback = newTrue()
+		return execTxErr
+	}
+	if txCommitErr := tx.Commit(); txCommitErr != nil {
+		rollback = newTrue()
+		return txCommitErr
+	}
+	return nil
+}
+
+func createGame(db *sql.DB, game Game) (int64, error) {
+	tx, txErr := db.Begin()
+	if txErr != nil {
+		return 0, txErr
+	}
+	var rollback = newFalse()
+	defer func(tx *sql.Tx, rollback *bool) {
+		if rollback != nil && *rollback == true {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				log.Println("Transaction cannot be rollbacked", rollbackErr)
+			}
+		}
+	}(tx, rollback)
+	data, marshallErr := json.Marshal(game)
+	if marshallErr != nil {
+		rollback = newTrue()
+		return 0, marshallErr
+	}
+	result, execTxErr := tx.Exec("INSERT INTO GAMES (BODY) VALUES($1)", data)
+	id, idErr := result.LastInsertId()
+	if idErr != nil {
+		rollback = newTrue()
+		return 0, idErr
+	}
+	if execTxErr != nil {
+		rollback = newTrue()
+		return 0, execTxErr
+	}
+	if txCommitErr := tx.Commit(); txCommitErr != nil {
+		rollback = newTrue()
+		return 0, txCommitErr
+	}
+	return id, nil
+}
+
+func getGame(db *sql.DB, id int64) (*Game, error) {
+	rows, rowsErr := db.Query("SELECT BODY FROM GAMES WHERE ID = $1", id)
 	if rowsErr != nil {
-		log.Println(rowsErr)
+		return nil, rowsErr
 	}
 	defer rows.Close()
 	var game = &Game{}
@@ -224,13 +262,47 @@ func (ggh *GetGameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var body *[]byte
 		rows.Scan(&body)
 		if err := json.Unmarshal(*body, game); err == nil {
-			idint, _ := strconv.ParseInt(id, 10, 64)
-			game.ID = idint
+			game.ID = id
 		} else {
-			log.Println(err)
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("Entity with id = " + strconv.FormatInt(id, 10) + " not found")
+	}
+	return game, nil
+}
+
+func searchGames(db *sql.DB, limit int64, offset int64) (*[]Game, error) {
+	sqlQuery := "SELECT ID, BODY FROM GAMES WHERE 1 = 1 LIMIT $1 OFFSET $2"
+	rows, rowsErr := db.Query(sqlQuery, limit, offset)
+	if rowsErr != nil {
+		return nil, rowsErr
+	}
+	defer rows.Close()
+	games := []Game{}
+	for rows.Next() {
+		var ID *int64
+		var body *[]byte
+		rows.Scan(&ID, &body)
+		var game = &Game{}
+		if err := json.Unmarshal(*body, game); err == nil {
+			game.ID = *ID
+			games = append(games, *game)
+		} else {
+			return nil, err
 		}
 	}
-	json.NewEncoder(w).Encode(game)
+	return &games, nil
+}
+
+func newTrue() *bool {
+	b := true
+	return &b
+}
+
+func newFalse() *bool {
+	b := false
+	return &b
 }
 
 //Game struct represent rest object for game entity
